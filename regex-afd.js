@@ -18,28 +18,22 @@ function isRegExpKeyword(obj) {
 function getAugmentedRegularExpression(string) {
   const augmentedRegEx = [];
 
-  const steps = string.length - 1;
-  for (let i = 0; i < steps; i++) {
+  for (let i = 1; i < string.length; i++) {
+    const prevChar = string[i - 1];
     const char = string[i];
-    const nextChar = string[i + 1];
 
-    if (!isRegExpKeyword(char) && isLetter(nextChar)) {
+    augmentedRegEx.push(prevChar);
+
+    const isStarExp = prevChar === '*';
+    if ((isLetter(prevChar) && !isRegExpKeyword(char)) || isStarExp) {
       augmentedRegEx.push('.');
     }
-
-    augmentedRegEx.push(char);
   }
 
-  const lastChar = string[string.length - 1];
+  const lastLetter = string[string.length - 1];
+  augmentedRegEx.push(lastLetter);
 
-  if (isLetter(lastChar)) {
-    augmentedRegEx.push('.');
-  }
-
-  augmentedRegEx.push(lastChar);
-  augmentedRegEx.push('#');
-
-  return augmentedRegEx;
+  return augmentedRegEx.join('');
 }
 
 function isNullable(node) {
@@ -71,13 +65,27 @@ const node = {
 };
 
 /**
- * @param {string[]} augmentedRegEx
+ * @param {string} augmentedRegEx
  */
 function createSyntaxTree(augmentedRegEx) {
-  //
+  const nodes = augmentedRegEx.split('.');
 }
 
 createSyntaxTree(getAugmentedRegularExpression('(a|b)*abb'));
 
-console.log(getAugmentedRegularExpression('(a|b)*abb').join(''));
+// console.log(getAugmentedRegularExpression('(a|b)*abb').split('.'));
 console.log(getAugmentedRegularExpression('(a|b)*abb'));
+// console.log(getAugmentedRegularExpression('(ab|b)*abb').split('.'));
+// console.log(getAugmentedRegularExpression('(ab|b)*abb'));
+// console.log(
+//   getAugmentedRegularExpression('(ab|b)*ab(a(ab|b)*b|bc)*b').split('.')
+// );
+// console.log(getAugmentedRegularExpression('(ab|b)*ab(a(ab|b)*b|bc)*b'));
+
+// console.log('(ad(asd)(as(sad)d))asdad(asd)'.match(/(\((?>[^()]+|(?1))*\))/));
+
+// const matches = '(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/(\(([^()]|(?R))*\))/g);
+
+console.log('(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/\(([^\)\(]*)\)/));
+
+// console.log(matches);

@@ -1,0 +1,14 @@
+{
+  "name": "tema-tc",
+  "version": "0.0.1",
+  "description": "",
+  "main": "regex-afd.js",
+  "scripts": {
+    "start": "nodemon regex-afd"
+  },
+  "author": "Adrian Dinca",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^2.0.3"
+  }
+}

@@ -168,10 +168,100 @@ function getRpnRegEx(str) {
   return rpnRegEx.join('');
 }
 
+function copy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
+ * @param {Token[]} tokens
+ */
+function getNullable(tokens) {
+  const nullable = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.type === 'LETTER' || token.type === 'END') {
+      nullable.push(false);
+    } else if (token.type === 'STAR') {
+      nullable.push(true);
+    } else if (token.type === 'CONCAT') {
+      nullable.push(nullable[i - 2] && nullable[i - 1]);
+    } else if (token.type === 'OR') {
+      nullable.push(nullable[i - 2] || nullable[i - 1]);
+    }
+  }
+
+  return nullable;
+}
+
+/**
+ * @param {Token[]} tokens
+ * @param {boolean[]} nullable
+ */
+function getFirstPos(tokens, nullable) {
+  const firstPos = [];
+  let currentNumber = 0;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    if (token.type === 'LETTER' || token.type === 'END') {
+      firstPos.push([++currentNumber]);
+    } else if (token.type === 'OR') {
+      firstPos.push([...copy(firstPos[i - 2]), ...copy(firstPos[i - 1])]);
+    } else if (token.type === 'STAR') {
+      firstPos.push(copy(firstPos[i - 1]));
+    } else if (token.type === 'CONCAT') {
+      if (nullable[i - 2]) {
+        firstPos.push([...copy(firstPos[i - 2]), ...copy(firstPos[i - 1])]);
+      } else {
+        firstPos.push(copy(firstPos[i - 2]));
+      }
+    }
+  }
+
+  return firstPos;
+}
+
+/**
+ * @param {Token[]} tokens
+ * @param {boolean[]} nullable
+ */
+function getLastPos(tokens, nullable) {
+  const lastPos = [];
+  let currentNumber = 0;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    if (token.type === 'LETTER' || token.type === 'END') {
+      lastPos.push([++currentNumber]);
+    } else if (token.type === 'OR') {
+      lastPos.push([...copy(lastPos[i - 2]), ...copy(lastPos[i - 1])]);
+    } else if (token.type === 'STAR') {
+      lastPos.push(copy(lastPos[i - 1]));
+    } else if (token.type === 'CONCAT') {
+      if (nullable[i - 1]) {
+        lastPos.push([...copy(lastPos[i - 2]), ...copy(lastPos[i - 1])]);
+      } else {
+        lastPos.push(copy(lastPos[i - 1]));
+      }
+    }
+  }
+
+  return lastPos;
+}
+
 // '(a|bb(a|b)*)*abb'
 // '(a|b)*abb'
 // '(ab|b)*abb'
 
 // console.log(tokenize('(a|bb(a|b)*)*abb#'));
 // console.log(getAugmentedRegEx('(a|bb(a|b)*)*abb#'));
-console.log(getRpnRegEx('((a|bb(a|b)*)*abb)#'));
+// console.log(getRpnRegEx('((a|bb(a|b)*)*abb)#'));
+const rpnRegEx = getRpnRegEx('(a|b)*abb#');
+const rpnTokens = getTokens(rpnRegEx);
+const nullable = getNullable(rpnTokens);
+const firstPos = getFirstPos(rpnTokens, nullable);
+
+console.log(getLastPos(rpnTokens, nullable));

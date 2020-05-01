@@ -3,42 +3,45 @@ function isChar(obj) {
 }
 
 function isLetter(obj) {
-  return isChar(obj) && !!obj.match(/[a-z]/i);
+  return isChar(obj) && !!obj.match(/[a-z]|\*/i);
 }
 
 function isRegExpKeyword(obj) {
-  const regExpKeywords = ['*', '|', '(', ')'];
+  const regExpKeywords = ['|', '(', ')'];
   return isChar(obj) && regExpKeywords.includes(obj);
 }
 
 /**
  *
- * @param {string} string
+ * @param {string} str
  */
-function getAugmentedRegularExpression(string) {
+function getAugmentedRegularExpression(str) {
   const augmentedRegEx = [];
 
-  for (let i = 1; i < string.length; i++) {
-    const prevChar = string[i - 1];
-    const char = string[i];
+  // const
+  for (let i = 0; i < str.length - 1; i++) {
+    const chr = str[i];
+    const nextChr = str[i + 1];
 
-    augmentedRegEx.push(prevChar);
-
-    const isStarExp = prevChar === '*';
-    if ((isLetter(prevChar) && !isRegExpKeyword(char)) || isStarExp) {
+    augmentedRegEx.push(chr);
+    if (isLetter(chr) && isLetter(nextChr)) {
       augmentedRegEx.push('.');
     }
   }
 
-  const lastLetter = string[string.length - 1];
-  augmentedRegEx.push(lastLetter);
+  const lastChr = str[str.length - 1];
+  augmentedRegEx.push(lastChr);
+  if (isLetter(lastChr)) {
+    augmentedRegEx.push('.');
+  }
+
+  augmentedRegEx.push('#');
 
   return augmentedRegEx.join('');
 }
 
 function isNullable(node) {
-  const nullableValues = ['*', 'epsilon'];
-  return nullableValues.includes(node);
+  return node === '*';
 }
 
 function calcFirstPos(node) {
@@ -69,7 +72,25 @@ const node = {
  */
 function createSyntaxTree(augmentedRegEx) {
   const nodes = augmentedRegEx.split('.');
+  console.log({ nodes });
 }
+
+let subtreeCount = 0;
+
+/**
+ * @param {string} str
+ */
+function handleParentheses(str) {
+  const parenthesesRegExp = /\(([^\)\(]*)\)/;
+
+  let match;
+  while ((match = str.match(parenthesesRegExp))) {
+    str = str.replace(match[0], `<${subtreeCount++}>`);
+    console.log({ str });
+  }
+}
+
+handleParentheses('(a|bb(a|b)*)*abb');
 
 createSyntaxTree(getAugmentedRegularExpression('(a|b)*abb'));
 
@@ -86,6 +107,7 @@ console.log(getAugmentedRegularExpression('(a|b)*abb'));
 
 // const matches = '(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/(\(([^()]|(?R))*\))/g);
 
-console.log('(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/\(([^\)\(]*)\)/));
+// console.log('(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/\(([^\)\(]*)\)/));
+console.log('(a|b)*abb'.match(/\(([^\)\(]*)\)/));
 
 // console.log(matches);

@@ -165,6 +165,8 @@ function getRpnRegEx(str) {
     }
   });
 
+  // Add concatenation node for the END type
+  rpnRegEx.push('.');
   return rpnRegEx.join('');
 }
 
@@ -252,6 +254,36 @@ function getLastPos(tokens, nullable) {
   return lastPos;
 }
 
+/**
+ * @param {Token[]} tokens
+ * @param {boolean[]} nullable
+ * @param {any[]} firstPos
+ * @param {any[]} lastPos
+ */
+function getFollowPos(tokens, nullable, firstPos, lastPos) {
+  const followPos = tokens
+    .filter(token => token.type !== 'STAR' && token.type !== 'CONCAT')
+    .map(elem => []);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    if (token.type !== 'STAR' && token.type !== 'CONCAT') continue;
+
+    if (token.type === 'STAR') {
+      for (const elem of lastPos[i]) {
+        followPos[elem] = [...copy(followPos[elem]), ...copy(firstPos[i])];
+      }
+    } else if (token.type === 'CONCAT') {
+      for (const elem of lastPos[i - 2]) {
+        followPos[elem] = [...copy(followPos[elem]), ...copy(firstPos[i - 1])];
+      }
+    }
+  }
+
+  return followPos;
+}
+
 // '(a|bb(a|b)*)*abb'
 // '(a|b)*abb'
 // '(ab|b)*abb'
@@ -259,9 +291,11 @@ function getLastPos(tokens, nullable) {
 // console.log(tokenize('(a|bb(a|b)*)*abb#'));
 // console.log(getAugmentedRegEx('(a|bb(a|b)*)*abb#'));
 // console.log(getRpnRegEx('((a|bb(a|b)*)*abb)#'));
-const rpnRegEx = getRpnRegEx('(a|b)*abb#');
+const str = '(a|b)*abb#';
+const rpnRegEx = getRpnRegEx(str);
 const rpnTokens = getTokens(rpnRegEx);
 const nullable = getNullable(rpnTokens);
 const firstPos = getFirstPos(rpnTokens, nullable);
+const lastPos = getLastPos(rpnTokens, nullable);
 
-console.log(getLastPos(rpnTokens, nullable));
+console.log(getFollowPos(rpnTokens, nullable, firstPos, lastPos));

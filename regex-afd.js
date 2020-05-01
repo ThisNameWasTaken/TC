@@ -1,184 +1,177 @@
-function isChar(obj) {
-  return (typeof obj === 'string' || obj instanceof String) && obj.length === 1;
-}
+const Lexer = require('lex');
 
-function isLetter(obj) {
-  return isChar(obj) && !!obj.match(/[a-z]|\*|>/i);
-}
+/**
+ * @typedef {'OPEN_PARENTHESES' | 'CLOSED_PARENTHESES' | 'STAR' | 'OR' | 'LETTER' | 'CONCAT' | 'END'} TokenType
+ */
 
-function isRegExpKeyword(obj) {
-  const regExpKeywords = ['|', '(', ')'];
-  return isChar(obj) && regExpKeywords.includes(obj);
+/**
+ * @typedef {{regEx: RegExp, tokenType: TokenType}} LexerRule
+ */
+
+const lexer = new Lexer();
+
+/** @type {LexerRule[]} */
+const lexerRules = [
+  {
+    regEx: /\(/,
+    tokenType: 'OPEN_PARENTHESES',
+  },
+  {
+    regEx: /\)/,
+    tokenType: 'CLOSED_PARENTHESES',
+  },
+  {
+    regEx: /\|/,
+    tokenType: 'OR',
+  },
+  {
+    regEx: /\*/,
+    tokenType: 'STAR',
+  },
+  {
+    regEx: /\./,
+    tokenType: 'CONCAT',
+  },
+  {
+    regEx: /[a-z]/i,
+    tokenType: 'LETTER',
+  },
+  {
+    regEx: /#/,
+    tokenType: 'END',
+  },
+];
+
+lexerRules.forEach(({ regEx, tokenType }) =>
+  lexer.addRule(regEx, () => tokenType)
+);
+
+class Token {
+  /**
+   * @param {{ type: TokenType, value: string }} param0
+   */
+  constructor({ type, value }) {
+    this.type = type;
+    this.value = value;
+  }
 }
 
 /**
- *
  * @param {string} str
  */
-function getAugmentedRegularExpression(str) {
+function getTokens(str) {
+  lexer.setInput(str);
+
+  const tokens = [];
+
+  try {
+    let i = 0;
+    for (let tokenType = lexer.lex(); tokenType; tokenType = lexer.lex()) {
+      tokens.push(new Token({ type: tokenType, value: str[i] }));
+      i++;
+    }
+  } catch (err) {
+    console.error(err);
+
+    return [];
+  }
+
+  return tokens;
+}
+
+function getAugmentedRegEx(str) {
+  const tokens = getTokens(str);
+  let canConcatenate = false;
   const augmentedRegEx = [];
 
-  // const
-  for (let i = 0; i < str.length - 1; i++) {
-    const chr = str[i];
-    const nextChr = str[i + 1];
+  /**
+   *
+   * @param {Token} token
+   * @param {number} i
+   */
+  function handleAugmentation(token, i) {
+    if (token.type === 'LETTER' || token.type === 'END') {
+      if (!canConcatenate) {
+        canConcatenate = true;
+        return;
+      }
 
-    augmentedRegEx.push(chr);
-    if (isLetter(chr) && isLetter(nextChr)) {
+      const prevToken = tokens[i - 1];
+      if (prevToken.type === 'OPEN_PARENTHESES') return;
+
       augmentedRegEx.push('.');
+    } else if (token.type === 'STAR' || token.type === 'CLOSED_PARENTHESES') {
+      canConcatenate = true;
+    } else if (token.type === 'OPEN_PARENTHESES' && i > 0) {
+      const prevToken = tokens[i - 1];
+      if (prevToken.type === 'LETTER' || prevToken.type === 'STAR') {
+        augmentedRegEx.push('.');
+      }
+    } else {
+      canConcatenate = false;
     }
   }
 
-  const lastChr = str[str.length - 1];
-  augmentedRegEx.push(lastChr);
-  // if (isLetter(lastChr)) {
-  //   augmentedRegEx.push('.');
-  // }
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
 
-  // augmentedRegEx.push('#');
+    handleAugmentation(token, i);
+
+    augmentedRegEx.push(token.value);
+  }
 
   return augmentedRegEx.join('');
 }
 
-function isNullable(node) {
-  return node === '*';
-}
+function getRpnRegEx(str) {
+  const augmentedRegEx = getAugmentedRegEx(str);
+  const tokens = getTokens(augmentedRegEx);
+  /** @type {Token[]} */
+  const operatorStack = [];
+  const rpnRegEx = [];
 
-function calcFirstPos(node) {
-  // ...
-}
-
-function calcLastPos(node) {
-  // ...
-}
-
-class SyntaxTreeNode {
-  constructor({
-    label = undefined,
-    firstPos = [],
-    lastPos = [],
-    isNullable = false,
-    leftChild = undefined,
-    rightChild = undefined,
-    parent = undefined,
-  }) {
-    this.label = label;
-    this.firstPos = firstPos;
-    this.lastPos = lastPos;
-    this.isNullable = isNullable;
-    this.leftChild = leftChild;
-    this.rightChild = rightChild;
-    this.parent = parent;
-  }
-}
-
-class SyntaxTree {
-  // /** @type {SyntaxTreeNode[]} */
-  // nodes = [];
-  /** @type {SyntaxTreeNode} */
-  root;
-
-  /**
-   * @param {string} label
-   */
-  add(label) {
-    // if root is undefined
-    // root = newNode;
-    // if root does not have parent
-    // root.parent = newNode
-    // root = newNode;
-    // if root does not have a leftChild
-    // root.leftChild = newNode;
-    // if root does not have a rightChild and the root is not a star
-    // root.rightChild = newNode;
-
-    const newNode = new SyntaxTreeNode({ label });
-
-    this.nodes.push(newNode);
-
-    if (this.nodes.length == 1) return;
-
-    const lastAddedNode = this.nodes[this.nodes.length - 1];
-    newNode.leftChild = this.nodes[this.nodes.length - 1];
-
-    if (this.nodes.length % 2 === 0) {
-      lastAddedNode.rightChild = newNode;
+  tokens.forEach((token, i) => {
+    if (
+      token.type === 'LETTER' ||
+      token.type === 'STAR' ||
+      token.type === 'END'
+    ) {
+      rpnRegEx.push(token.value);
+    } else if (token.type === 'OPEN_PARENTHESES') {
+      operatorStack.push(token);
+    } else if (token.type === 'CLOSED_PARENTHESES') {
+      while (
+        operatorStack[operatorStack.length - 1].type !== 'OPEN_PARENTHESES'
+      ) {
+        rpnRegEx.push(operatorStack.pop().value);
+      }
+      // Pop the matching operator
+      operatorStack.pop();
+    } else if (token.type === 'OR' || token.type === 'CONCAT') {
+      if (operatorStack.length > 0) {
+        const prevOperator = operatorStack[operatorStack.length - 1];
+        if (
+          prevOperator.type !== 'OPEN_PARENTHESES' &&
+          prevOperator.type !== 'CLOSED_PARENTHESES'
+        ) {
+          rpnRegEx.push(operatorStack.pop().value);
+          operatorStack.push(token);
+        } else {
+          operatorStack.push(token);
+        }
+      } else {
+        operatorStack.push(token);
+      }
     }
-  }
-}
-
-const syntaxTrees = {
-  // ...
-};
-
-let subtreeCount = 0;
-
-/**
- * @param {string} str
- */
-function addSyntaxTree(str) {
-  const augmentedRegEx = getAugmentedRegularExpression(str);
-  console.log({ augmentedRegEx });
-  const newTree = createSyntaxTree(augmentedRegEx);
-  syntaxTrees[`<${subtreeCount}>`] = newTree;
-}
-
-/**
- * @param {string} augmentedRegEx
- */
-function createSyntaxTree(augmentedRegEx) {
-  const syntaxTree = new SyntaxTree();
-
-  const orNodes = augmentedRegEx.split('|');
-  console.log({ orNodes });
-
-  orNodes.forEach(node => {
-    const nodesToConcat = node.split('.');
-
-    syntaxTree.add(node);
-
-    console.log({ nodesToConcat });
   });
 
-  console.log('');
-
-  return syntaxTree;
+  return rpnRegEx.join('');
 }
 
-/**
- * @param {string} str
- */
-function handleParentheses(str) {
-  const parenthesesRegExp = /\(([^\)\(]*)\)/;
+// '(a|bb(a|b)*)*abb'
+// '(a|b)*abb'
+// '(ab|b)*abb'
 
-  let match;
-  while ((match = str.match(parenthesesRegExp))) {
-    addSyntaxTree(match[1]);
-    str = str.replace(match[0], `<${subtreeCount++}>`);
-  }
-
-  addSyntaxTree(str);
-}
-
-handleParentheses('(a|bb(a|b)*)*abb');
-// handleParentheses('(ab)*abb');
-
-// createSyntaxTree(getAugmentedRegularExpression('(a|b)*abb'));
-
-// console.log(getAugmentedRegularExpression('(a|b)*abb').split('.'));
-// console.log(getAugmentedRegularExpression('(a|b)*abb'));
-// console.log(getAugmentedRegularExpression('(ab|b)*abb').split('.'));
-// console.log(getAugmentedRegularExpression('(ab|b)*abb'));
-// console.log(
-//   getAugmentedRegularExpression('(ab|b)*ab(a(ab|b)*b|bc)*b').split('.')
-// );
-// console.log(getAugmentedRegularExpression('(ab|b)*ab(a(ab|b)*b|bc)*b'));
-
-// console.log('(ad(asd)(as(sad)d))asdad(asd)'.match(/(\((?>[^()]+|(?1))*\))/));
-
-// const matches = '(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/(\(([^()]|(?R))*\))/g);
-
-// console.log('(ab|b)*ab(a(ab|b)*b|bc)*b'.match(/\(([^\)\(]*)\)/));
-// console.log('(a|b)*abb'.match(/\(([^\)\(]*)\)/));
-
-// console.log(matches);
+// console.log(tokenize('(a|bb(a|b)*)*abb#'));
+// console.log(getAugmentedRegEx('(a|bb(a|b)*)*abb#'));
+console.log(getRpnRegEx('((a|bb(a|b)*)*abb)#'));

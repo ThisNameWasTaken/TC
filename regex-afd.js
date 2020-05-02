@@ -210,12 +210,12 @@ function getFirstPos(tokens, nullable) {
     if (token.type === 'LETTER' || token.type === 'END') {
       firstPos.push([++currentNumber]);
     } else if (token.type === 'OR') {
-      firstPos.push([...copy(firstPos[i - 2]), ...copy(firstPos[i - 1])]);
+      firstPos.push([...firstPos[i - 2], ...firstPos[i - 1]]);
     } else if (token.type === 'STAR') {
       firstPos.push(copy(firstPos[i - 1]));
     } else if (token.type === 'CONCAT') {
       if (nullable[i - 2]) {
-        firstPos.push([...copy(firstPos[i - 2]), ...copy(firstPos[i - 1])]);
+        firstPos.push([...firstPos[i - 2], ...firstPos[i - 1]]);
       } else {
         firstPos.push(copy(firstPos[i - 2]));
       }
@@ -239,12 +239,12 @@ function getLastPos(tokens, nullable) {
     if (token.type === 'LETTER' || token.type === 'END') {
       lastPos.push([++currentNumber]);
     } else if (token.type === 'OR') {
-      lastPos.push([...copy(lastPos[i - 2]), ...copy(lastPos[i - 1])]);
+      lastPos.push([...lastPos[i - 2], ...lastPos[i - 1]]);
     } else if (token.type === 'STAR') {
       lastPos.push(copy(lastPos[i - 1]));
     } else if (token.type === 'CONCAT') {
       if (nullable[i - 1]) {
-        lastPos.push([...copy(lastPos[i - 2]), ...copy(lastPos[i - 1])]);
+        lastPos.push([...lastPos[i - 2], ...lastPos[i - 1]]);
       } else {
         lastPos.push(copy(lastPos[i - 1]));
       }
@@ -272,11 +272,13 @@ function getFollowPos(tokens, nullable, firstPos, lastPos) {
 
     if (token.type === 'STAR') {
       for (const elem of lastPos[i]) {
-        followPos[elem] = [...copy(followPos[elem]), ...copy(firstPos[i])];
+        followPos[elem] = [...followPos[elem], ...firstPos[i]];
       }
     } else if (token.type === 'CONCAT') {
       for (const elem of lastPos[i - 2]) {
-        followPos[elem] = [...copy(followPos[elem]), ...copy(firstPos[i - 1])];
+        followPos[elem] = [
+          ...new Set([...followPos[elem], ...firstPos[i - 1]]),
+        ];
       }
     }
   }
@@ -363,7 +365,7 @@ function getAFD(rpnTokens, firstPos, lastPos, followPos) {
       .split(',')
       .map(pos => table.find(elem => elem.value === parseInt(pos)));
 
-    console.log(transitions);
+    // console.log(transitions);
 
     const transitionLabels = [
       ...new Set(transitions.map(({ label }) => label)),
@@ -389,9 +391,6 @@ function getAFD(rpnTokens, firstPos, lastPos, followPos) {
 // '(a|b)*abb'
 // '(ab|b)*abb'
 
-// console.log(tokenize('(a|bb(a|b)*)*abb#'));
-// console.log(getAugmentedRegEx('(a|bb(a|b)*)*abb#'));
-// console.log(getRpnRegEx('((a|bb(a|b)*)*abb)#'));
 const str = '(a|b)*abb#';
 const rpnRegEx = getRpnRegEx(str);
 const rpnTokens = getTokens(rpnRegEx);

@@ -284,6 +284,107 @@ function getFollowPos(tokens, nullable, firstPos, lastPos) {
   return followPos;
 }
 
+class AFD {
+  states = {};
+
+  /**
+   * @param {string | number} state
+   */
+  hasState(state) {
+    return !!this.states[state];
+  }
+
+  /**
+   * @param {string | number} state
+   * @param {{value?: any, isFinal?: boolean}} options
+   */
+  addState(state, { value = {}, isFinal = false }) {
+    if (this.hasState(state)) return;
+
+    this.states[state] = { ...value, isFinal };
+  }
+
+  /**
+   * @param {string | number} fromState
+   * @param {string | number} transition
+   * @param {string | number} toState
+   */
+  addTransition(fromState, transition, toState) {
+    if (!this.states[fromState]) {
+      this.states[fromState] = {};
+    }
+
+    if (!this.states[fromState][transition]) {
+      this.states[fromState][transition] = [];
+    }
+
+    this.states[fromState][transition].push(toState);
+  }
+}
+
+/**
+ * @param {Token[]} rpnTokens
+ * @param {any[]} firstPos
+ * @param {any[]} lastPos
+ * @param {any[]} followPos
+ */
+function getAFD(rpnTokens, firstPos, lastPos, followPos) {
+  const nodeIndices = [];
+  rpnTokens.forEach((token, i) => {
+    if (token.type === 'LETTER' || token.type === 'END') {
+      nodeIndices.push(i);
+    }
+  });
+
+  const table = nodeIndices.map((nodeIndex, i) => ({
+    label: rpnTokens[nodeIndex].value,
+    value: lastPos[nodeIndex][0],
+    followPos: followPos[i + 1],
+  }));
+
+  console.log(table);
+
+  const afd = new AFD();
+
+  const initialState = firstPos[firstPos.length - 1]; // firstPos of root
+
+  const states = new Set([initialState.join(',')]);
+
+  const finalStateValue = table[table.length - 1].value;
+
+  for (const state of states) {
+    const isFinalState = !!state
+      .split(',')
+      .find(elem => parseInt(elem) === finalStateValue);
+
+    afd.addState(state, { isFinal: isFinalState });
+
+    const transitions = state
+      .split(',')
+      .map(pos => table.find(elem => elem.value === parseInt(pos)));
+
+    console.log(transitions);
+
+    const transitionLabels = [
+      ...new Set(transitions.map(({ label }) => label)),
+    ];
+
+    transitionLabels.forEach(label => {
+      const newState = transitions
+        .filter(transition => transition.label === label)
+        .reduce((acc, transition) => [...acc, ...transition.followPos], [])
+        .join(',');
+
+      if (!newState) return;
+
+      states.add(newState);
+      afd.addTransition(state, label, newState);
+    });
+  }
+
+  return afd;
+}
+
 // '(a|bb(a|b)*)*abb'
 // '(a|b)*abb'
 // '(ab|b)*abb'
@@ -297,5 +398,6 @@ const rpnTokens = getTokens(rpnRegEx);
 const nullable = getNullable(rpnTokens);
 const firstPos = getFirstPos(rpnTokens, nullable);
 const lastPos = getLastPos(rpnTokens, nullable);
+const followPos = getFollowPos(rpnTokens, nullable, firstPos, lastPos);
 
-console.log(getFollowPos(rpnTokens, nullable, firstPos, lastPos));
+console.log(getAFD(rpnTokens, firstPos, lastPos, followPos).states);

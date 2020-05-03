@@ -2,7 +2,7 @@
 `E->iT`;
 `T->+iT|$`;
 
-const input = 'i+i+';
+const input = '+i+i+i';
 
 let inputIndex = 0;
 let lookAhead = '';
@@ -13,7 +13,7 @@ const grammar = {
   T: '+iT',
 
   $BEGIN_STATE: 'E',
-  $END_STATES: ['T'],
+  $FINAL_STATES: ['T'],
 };
 
 function isTerminal(elem) {
@@ -23,8 +23,9 @@ function isTerminal(elem) {
 }
 
 function match(elem) {
-  const expectedValue = input[inputIndex++];
-  console.log({ expectedValue, elem });
+  const expectedValue = input[inputIndex];
+  inputIndex++;
+  lookAheadIndex++;
   return elem === expectedValue;
 }
 
@@ -33,19 +34,24 @@ function callFunction(elem) {
   lookAheadIndex = 0;
 }
 
+function isFinalState(state) {
+  return grammar.$FINAL_STATES.includes(state);
+}
+
 function isValid() {
   callFunction(grammar.$BEGIN_STATE);
 
   while (inputIndex < input.length) {
-    if (isTerminal(lookAhead[lookAheadIndex])) {
-      if (!match(lookAhead[lookAheadIndex])) return false;
-      lookAheadIndex++;
+    const _lookAhead = lookAhead[lookAheadIndex];
+
+    if (isTerminal(_lookAhead)) {
+      if (!match(_lookAhead)) return false;
     } else {
-      callFunction(lookAhead[lookAheadIndex]);
+      callFunction(_lookAhead);
     }
   }
 
-  return true;
+  return isFinalState(lookAhead[lookAheadIndex]);
 }
 
 console.log(isValid());

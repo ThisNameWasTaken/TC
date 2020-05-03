@@ -1,7 +1,7 @@
 const Lexer = require('lex');
 
 /**
- * @typedef { 'OPENING_CURLY_BRACE' | 'CLOSING_CURLY_BRACE' | 'OPENING_BRACKET' | 'CLOSING_BRACKET' | 'COMMA' | 'COLON' | 'STRING' | 'NUMBER' | 'BOOLEAN' | 'NULL' } TokenType
+ * @typedef { 'NUMBER' | 'OPERATOR' } TokenType
  */
 
 /**
@@ -17,44 +17,12 @@ const lexer = new Lexer();
 /** @type {LexerRule[]} */
 const lexerRules = [
   {
-    regEx: /{/,
-    tokenType: 'OPENING_CURLY_BRACE',
-  },
-  {
-    regEx: /}/,
-    tokenType: 'CLOSING_CURLY_BRACE',
-  },
-  {
-    regEx: /\[/,
-    tokenType: 'OPENING_BRACKET',
-  },
-  {
-    regEx: /\]/,
-    tokenType: 'CLOSING_BRACKET',
-  },
-  {
-    regEx: /,/,
-    tokenType: 'COMMA',
-  },
-  {
-    regEx: /:/,
-    tokenType: 'COLON',
-  },
-  {
-    regEx: /".*?"/,
-    tokenType: 'STRING',
-  },
-  {
     regEx: /([0-9])+/,
     tokenType: 'NUMBER',
   },
   {
-    regEx: /true|false/,
-    tokenType: 'BOOLEAN',
-  },
-  {
-    regEx: /null/,
-    tokenType: 'NULL',
+    regEx: /\+|\-|\*|\/|=/,
+    tokenType: 'OPERATOR',
   },
 ];
 
@@ -66,9 +34,10 @@ lexerRules.forEach(({ regEx, tokenType }) =>
  * @param {string} str
  */
 function getTokens(str) {
+  lexer.setInput(str);
+
   /** @type {Token[]} */
   const tokens = [];
-  lexer.setInput(str);
 
   try {
     for (let token = lexer.lex(); token; token = lexer.lex()) {
@@ -76,43 +45,21 @@ function getTokens(str) {
     }
   } catch (err) {
     console.error(err);
+
     return [];
   }
 
   return tokens;
 }
 
-// const grammar = {
-//   PRODUCTION1: ['NUMBER', 'PRODUCTION2'],
-//   PRODUCTION2: ['OPERATOR', 'NUMBER', 'PRODUCTION2'],
-
-//   $STARTING_PRODUCTION: 'PRODUCTION1',
-//   $END_PRODUCTIONS: {
-//     PRODUCTION2: {},
-//   },
-// };
-
-// TODO: Empty objects are also valid
-('OBJECT -> OPENING_CURLY_BRACE KEY_VALUE_PAIR CLOSING_CURLY_BRACE');
-('KEY_VALUE_PAIR -> STRING COLON VALUE');
-('VALUE -> STRING | NUMBER | BOOLEAN | NULL | ARRAY | OBJECT | END');
-('ARRAY -> OPENING_BRACKET VALUE ARRAY_TAIL CLOSING_BRACKET');
-('ARRAY_TAIL -> COMA VALUE ARRAY_TAIL | END');
-
 const grammar = {
-  OBJECT: ['OPENING_CURLY_BRACE', 'KEY_VALUE_PAIR', 'CLOSING_CURLY_BRACE'],
-  // KEY_VALUE_PAIRS: ['KEY_VALUE_PAIR', 'KEY_VALUE_PAIR_TAIL'],
-  KEY_VALUE_PAIR: ['STRING', 'COLON', 'VALUE'],
-  // KEY_VALUE_PAIR_TAIL: ['COMMA', ],
-  // STRING | NUMBER | BOOLEAN | NULL | ARRAY | OBJECT
-  VALUE: ['STRING'],
-  ARRAY: ['OPENING_BRACKET', 'VALUE', 'ARRAY_TAIL', 'CLOSING_BRACKET'],
-  ARRAY_TAIL: ['COMMA', 'VALUE', 'ARRAY_TAIL'],
+  PRODUCTION1: ['NUMBER', 'PRODUCTION2'],
+  PRODUCTION2: ['OPERATOR', 'NUMBER', 'PRODUCTION2'],
 
-  $STARTING_PRODUCTION: 'OBJECT',
+  $STARTING_PRODUCTION: 'PRODUCTION1',
+
   $END_PRODUCTIONS: {
-    VALUE: {},
-    ARRAY_TAIL: {},
+    PRODUCTION2: {},
   },
 };
 
@@ -128,7 +75,6 @@ function isProduction(productionName) {
 }
 
 function isValidGrammar(input) {
-  console.log({ input });
   return isValidProduction(grammar.$STARTING_PRODUCTION, input);
 }
 
@@ -159,8 +105,6 @@ function isValidProduction(productionName, input) {
 
   for (const token of production) {
     if (isProduction(token)) {
-      console.log('production', token);
-      console.log('input', input);
       if (!isValidProduction(token, _input)) return false;
     } else {
       const expectedToken = _input.shift();
@@ -172,11 +116,20 @@ function isValidProduction(productionName, input) {
   return true;
 }
 
-const str = '{"lorem":"2"}';
+const str = '12+32/32=24';
 const tokens = getTokens(str);
 const tokenTypes = tokens.map(({ type }) => type);
 
 console.log(isValidGrammar(tokenTypes));
 
-('PRODUCTION1 -> NUMBER PRODUCTION2 | SIGN_OPERATOR PRODUCTION2 | END');
-('PRODUCTION2 -> SIGN_OPERATOR NUMBER PRODUCTION2 | OPERATOR NUMBER PRODUCTION2 | END');
+// TODO: Convert the left recursive grammar to a right recursive grammar
+// E -> iE'
+// E' -> +iE'|#
+
+`i+i$`;
+
+`E -> i E'`;
+`E' -> + i E' | $`;
+
+`EXPRESSION -> NUMBER EXPRESSION'`;
+`EXPRESSION' -> OPERATOR NUMBER EXPRESSION' | END`;

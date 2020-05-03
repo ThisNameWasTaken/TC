@@ -1,135 +1,51 @@
-const Lexer = require('lex');
+`i+i$`;
+`E->iT`;
+`T->+iT|$`;
 
-/**
- * @typedef { 'NUMBER' | 'OPERATOR' } TokenType
- */
+const input = 'i+i+';
 
-/**
- * @typedef {{regEx: RegExp, tokenType: TokenType}} LexerRule
- */
-
-/**
- * @typedef {{ type: TokenType, value: string }} Token
- */
-
-const lexer = new Lexer();
-
-/** @type {LexerRule[]} */
-const lexerRules = [
-  {
-    regEx: /([0-9])+/,
-    tokenType: 'NUMBER',
-  },
-  {
-    regEx: /\+|\-|\*|\/|=/,
-    tokenType: 'OPERATOR',
-  },
-];
-
-lexerRules.forEach(({ regEx, tokenType }) =>
-  lexer.addRule(regEx, match => ({ value: match, type: tokenType }))
-);
-
-/**
- * @param {string} str
- */
-function getTokens(str) {
-  lexer.setInput(str);
-
-  /** @type {Token[]} */
-  const tokens = [];
-
-  try {
-    for (let token = lexer.lex(); token; token = lexer.lex()) {
-      tokens.push(token);
-    }
-  } catch (err) {
-    console.error(err);
-
-    return [];
-  }
-
-  return tokens;
-}
+let inputIndex = 0;
+let lookAhead = '';
+let lookAheadIndex = 0;
 
 const grammar = {
-  PRODUCTION1: ['NUMBER', 'PRODUCTION2'],
-  PRODUCTION2: ['OPERATOR', 'NUMBER', 'PRODUCTION2'],
+  E: 'iT',
+  T: '+iT',
 
-  $STARTING_PRODUCTION: 'PRODUCTION1',
-
-  $END_PRODUCTIONS: {
-    PRODUCTION2: {},
-  },
+  $BEGIN_STATE: 'E',
+  $END_STATES: ['T'],
 };
 
-const productions = Object.keys(grammar).filter(
-  element => !element.startsWith('$')
-);
-
-/**
- * @param {string} productionName
- */
-function isProduction(productionName) {
-  return productions.includes(productionName);
+function isTerminal(elem) {
+  return !Object.keys(grammar)
+    .filter(key => !key.startsWith('$'))
+    .includes(elem);
 }
 
-function isValidGrammar(input) {
-  return isValidProduction(grammar.$STARTING_PRODUCTION, input);
+function match(elem) {
+  const expectedValue = input[inputIndex++];
+  console.log({ expectedValue, elem });
+  return elem === expectedValue;
 }
 
-/**
- * @param {string} productionName
- */
-function isEndProduction(productionName) {
-  return productionName in grammar.$END_PRODUCTIONS;
+function callFunction(elem) {
+  lookAhead = grammar[elem];
+  lookAheadIndex = 0;
 }
 
-function copy(obj) {
-  return JSON.parse(JSON.stringify(obj));
-}
+function isValid() {
+  callFunction(grammar.$BEGIN_STATE);
 
-/**
- * @param {string} productionName
- * @param {string[]} input
- */
-function isValidProduction(productionName, input) {
-  if (!isProduction(productionName)) return false;
-
-  if (input.length === 0) return isEndProduction(productionName);
-
-  const production = grammar[productionName];
-
-  /** @type {string[]} */
-  const _input = copy(input);
-
-  for (const token of production) {
-    if (isProduction(token)) {
-      if (!isValidProduction(token, _input)) return false;
+  while (inputIndex < input.length) {
+    if (isTerminal(lookAhead[lookAheadIndex])) {
+      if (!match(lookAhead[lookAheadIndex])) return false;
+      lookAheadIndex++;
     } else {
-      const expectedToken = _input.shift();
-
-      if (expectedToken !== token) return false;
+      callFunction(lookAhead[lookAheadIndex]);
     }
   }
 
   return true;
 }
 
-const str = '12+32/32=24';
-const tokens = getTokens(str);
-const tokenTypes = tokens.map(({ type }) => type);
-
-console.log(isValidGrammar(tokenTypes));
-
-// TODO: Convert the left recursive grammar to a right recursive grammar
-// E -> iE'
-// E' -> +iE'|#
-
-`i+i$`;
-
-`E -> i E'`;
-`E' -> + i E' | $`;
-
-`EXPRESSION -> NUMBER EXPRESSION'`;
-`EXPRESSION' -> OPERATOR NUMBER EXPRESSION' | END`;
+console.log(isValid());

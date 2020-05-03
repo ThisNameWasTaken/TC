@@ -1,12 +1,10 @@
 const Lexer = require('lex');
 
-/**
- * @typedef {'OPEN_PARENTHESES' | 'CLOSED_PARENTHESES' | 'STAR' | 'OR' | 'LETTER' | 'CONCAT' | 'END'} TokenType
- */
+/** @typedef {'OPEN_PARENTHESES' | 'CLOSED_PARENTHESES' | 'STAR' | 'OR' | 'LETTER' | 'CONCAT' | 'END'} TokenType */
 
-/**
- * @typedef {{regEx: RegExp, tokenType: TokenType}} LexerRule
- */
+/** @typedef {{ type: TokenType, value: string }} Token */
+
+/** @typedef {{regEx: RegExp, tokenType: TokenType}} LexerRule */
 
 const lexer = new Lexer();
 
@@ -43,18 +41,8 @@ const lexerRules = [
 ];
 
 lexerRules.forEach(({ regEx, tokenType }) =>
-  lexer.addRule(regEx, () => tokenType)
+  lexer.addRule(regEx, match => ({ value: match, type: tokenType }))
 );
-
-class Token {
-  /**
-   * @param {{ type: TokenType, value: string }} param0
-   */
-  constructor({ type, value }) {
-    this.type = type;
-    this.value = value;
-  }
-}
 
 /**
  * @param {string} str
@@ -65,10 +53,8 @@ function getTokens(str) {
   const tokens = [];
 
   try {
-    let i = 0;
-    for (let tokenType = lexer.lex(); tokenType; tokenType = lexer.lex()) {
-      tokens.push(new Token({ type: tokenType, value: str[i] }));
-      i++;
+    for (let token = lexer.lex(); token; token = lexer.lex()) {
+      tokens.push(token);
     }
   } catch (err) {
     console.error(err);
@@ -256,11 +242,10 @@ function getLastPos(tokens, nullable) {
 
 /**
  * @param {Token[]} tokens
- * @param {boolean[]} nullable
  * @param {any[]} firstPos
  * @param {any[]} lastPos
  */
-function getFollowPos(tokens, nullable, firstPos, lastPos) {
+function getFollowPos(tokens, firstPos, lastPos) {
   const followPos = tokens
     .filter(token => token.type !== 'STAR' && token.type !== 'CONCAT')
     .map(elem => []);
@@ -397,6 +382,6 @@ const rpnTokens = getTokens(rpnRegEx);
 const nullable = getNullable(rpnTokens);
 const firstPos = getFirstPos(rpnTokens, nullable);
 const lastPos = getLastPos(rpnTokens, nullable);
-const followPos = getFollowPos(rpnTokens, nullable, firstPos, lastPos);
+const followPos = getFollowPos(rpnTokens, firstPos, lastPos);
 
 console.log(getAFD(rpnTokens, firstPos, lastPos, followPos).states);

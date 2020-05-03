@@ -1,20 +1,42 @@
-`i+i$`;
-`E->iT`;
-`T->+iT|$`;
+/**
+ * @param {string} str
+ */
+function parseGrammar(str) {
+  const grammarRegEx = /(\w)\s*->\s*([^\|\s]+)\s*\|?\s*(\$?)/;
 
-const input = '+i+i+i';
+  let match = str.match(grammarRegEx);
+  const grammar = { $FINAL_STATES: [] };
+
+  while (match) {
+    const [strToReplace, state, stateValue, isFinalState] = match;
+
+    if (!('$BEGIN_STATE' in grammar)) {
+      grammar.$BEGIN_STATE = state;
+    }
+
+    grammar[state] = stateValue;
+
+    if (!!isFinalState) {
+      grammar.$FINAL_STATES.push(state);
+    }
+
+    str = str.replace(strToReplace, '');
+    match = str.match(grammarRegEx);
+  }
+
+  return grammar;
+}
+
+const grammar = parseGrammar(`
+  A->iB
+  B->+iB|$
+`);
+
+const input = 'i+i';
 
 let inputIndex = 0;
 let lookAhead = '';
 let lookAheadIndex = 0;
-
-const grammar = {
-  E: 'iT',
-  T: '+iT',
-
-  $BEGIN_STATE: 'E',
-  $FINAL_STATES: ['T'],
-};
 
 function isTerminal(elem) {
   return !Object.keys(grammar)
@@ -40,6 +62,8 @@ function isFinalState(state) {
 
 function isValid() {
   callFunction(grammar.$BEGIN_STATE);
+
+  if (input.length === 0 && isFinalState(grammar.$BEGIN_STATE)) return true;
 
   while (inputIndex < input.length) {
     const _lookAhead = lookAhead[lookAheadIndex];

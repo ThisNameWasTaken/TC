@@ -410,7 +410,6 @@ if (typeof window !== 'undefined') {
 
       ctx.setup = () => {
         ctx.createCanvas(window.innerWidth, window.innerHeight);
-
         ctx.background(255);
 
         const states = Object.keys(afd);
@@ -421,7 +420,6 @@ if (typeof window !== 'undefined') {
           ctx.strokeWeight(3);
           ctx.fill(myColor);
           ctx.translate(base.x, base.y);
-          // ctx.arc(10, 10, vec.x, vec.y, 0, ctx.PI + ctx.QUARTER_PI, ctx.OPEN);
           ctx.line(0, 0, vec.x, vec.y);
           ctx.rotate(vec.heading());
           let arrowSize = 7;
@@ -431,14 +429,12 @@ if (typeof window !== 'undefined') {
         }
 
         ctx.textSize(20);
-        ctx.stroke(38, 148, 251);
+        ctx.stroke('#2582da');
         states.forEach((stateLabel, index) => {
           const stateX =
             padding + stateSize / 2 + index * (stateSize + stateSpacing);
           const stateY = padding + stateSize / 2;
           ctx.strokeWeight(3);
-
-          const state = afd[stateLabel];
 
           if (index !== 0) {
             if (afd[stateLabel].isFinal) {
@@ -447,13 +443,20 @@ if (typeof window !== 'undefined') {
               ctx.stroke(0);
             }
           }
-          ctx.fill('#fff');
           ctx.circle(stateX, stateY, stateSize);
 
-          ctx.fill('#000');
           ctx.stroke(0);
           ctx.strokeWeight(0);
           ctx.text(stateLabel, stateX, stateY);
+        });
+
+        states.forEach((stateLabel, index) => {
+          const stateX =
+            padding + stateSize / 2 + index * (stateSize + stateSpacing);
+          const stateY = padding + stateSize / 2;
+          ctx.strokeWeight(3);
+
+          const state = afd[stateLabel];
 
           const transitions = Object.keys(afd[stateLabel]).filter(
             key => !['isFinal'].includes(key)
@@ -470,6 +473,7 @@ if (typeof window !== 'undefined') {
 
               const color = randomColor();
 
+              ctx.strokeWeight(0);
               ctx.fill(color);
               ctx.text(
                 transitionLabel,
@@ -479,12 +483,12 @@ if (typeof window !== 'undefined') {
 
               drawArrow(
                 ctx.createVector(stateX, stateY + (1 + transitionIndex) * 20),
-                ctx.createVector(destinationStateX, destinationStateY + 10),
+                ctx.createVector(
+                  destinationStateX - stateSize / 2,
+                  destinationStateY + 10
+                ),
                 color
               );
-
-              console.log({ destinationStateIndex });
-              console.log(index - destinationStateIndex);
             });
           });
         });

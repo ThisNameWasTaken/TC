@@ -386,3 +386,111 @@ const lastPos = getLastPos(rpnTokens, nullable);
 const followPos = getFollowPos(rpnTokens, firstPos, lastPos);
 
 console.log(getAFD(rpnTokens, firstPos, lastPos, followPos).states);
+
+// Merge numai in browser
+if (typeof window !== 'undefined') {
+  import('p5').then(p5 => {
+    console.log(p5);
+
+    const afd = {
+      '1,2,3': { isFinal: false, a: ['1,2,3,4'], b: ['1,2,3'] },
+      '1,2,3,4': { isFinal: false, a: ['1,2,3,4'], b: ['1,2,3,5'] },
+      '1,2,3,5': { isFinal: false, a: ['1,2,3,4'], b: ['1,2,3,6'] },
+      '1,2,3,6': { isFinal: true, a: ['1,2,3,4'], b: ['1,2,3'] },
+    };
+
+    function randomColor() {
+      return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+    }
+
+    let s = ctx => {
+      const padding = 0;
+      const stateSpacing = 80;
+      const stateSize = 80;
+
+      ctx.setup = () => {
+        ctx.createCanvas(window.innerWidth, window.innerHeight);
+
+        ctx.background(255);
+
+        const states = Object.keys(afd);
+
+        function drawArrow(base, vec, myColor) {
+          ctx.push();
+          ctx.stroke(myColor);
+          ctx.strokeWeight(3);
+          ctx.fill(myColor);
+          ctx.translate(base.x, base.y);
+          // ctx.arc(10, 10, vec.x, vec.y, 0, ctx.PI + ctx.QUARTER_PI, ctx.OPEN);
+          ctx.line(0, 0, vec.x, vec.y);
+          ctx.rotate(vec.heading());
+          let arrowSize = 7;
+          ctx.translate(vec.mag() - arrowSize, 0);
+          ctx.triangle(0, arrowSize / 2, 0, -arrowSize / 2, arrowSize, 0);
+          ctx.pop();
+        }
+
+        ctx.textSize(20);
+        ctx.stroke(38, 148, 251);
+        states.forEach((stateLabel, index) => {
+          const stateX =
+            padding + stateSize / 2 + index * (stateSize + stateSpacing);
+          const stateY = padding + stateSize / 2;
+          ctx.strokeWeight(3);
+
+          const state = afd[stateLabel];
+
+          if (index !== 0) {
+            if (afd[stateLabel].isFinal) {
+              ctx.stroke(78, 211, 2);
+            } else {
+              ctx.stroke(0);
+            }
+          }
+          ctx.fill('#fff');
+          ctx.circle(stateX, stateY, stateSize);
+
+          ctx.fill('#000');
+          ctx.stroke(0);
+          ctx.strokeWeight(0);
+          ctx.text(stateLabel, stateX, stateY);
+
+          const transitions = Object.keys(afd[stateLabel]).filter(
+            key => !['isFinal'].includes(key)
+          );
+
+          transitions.forEach((transitionLabel, transitionIndex) => {
+            state[transitionLabel].forEach((destination, destinationIndex) => {
+              const destinationStateIndex = states.indexOf(destination);
+              const destinationStateX =
+                padding +
+                stateSize / 2 +
+                (-index + destinationStateIndex) * (stateSize + stateSpacing);
+              const destinationStateY = 0;
+
+              const color = randomColor();
+
+              ctx.fill(color);
+              ctx.text(
+                transitionLabel,
+                stateX,
+                stateY + (1 + transitionIndex) * 20
+              );
+
+              drawArrow(
+                ctx.createVector(stateX, stateY + (1 + transitionIndex) * 20),
+                ctx.createVector(destinationStateX, destinationStateY + 10),
+                color
+              );
+
+              console.log({ destinationStateIndex });
+              console.log(index - destinationStateIndex);
+            });
+          });
+        });
+      };
+    };
+
+    new p5(s);
+  });
+}

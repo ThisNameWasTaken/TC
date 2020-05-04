@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 /**
  * @param {string} str
  */
@@ -27,12 +29,9 @@ function parseGrammar(str) {
   return grammar;
 }
 
-const grammar = parseGrammar(`
-  A->iB
-  B->+iB|$
-`);
+const grammar = parseGrammar(fs.readFileSync('grammar-input.txt', 'utf-8'));
 
-const input = 'i+i';
+const input = fs.readFileSync('words-input.txt', 'utf-8');
 
 let inputIndex = 0;
 let lookAhead = '';

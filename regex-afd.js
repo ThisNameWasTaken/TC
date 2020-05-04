@@ -1,3 +1,4 @@
+const fs = require('fs');
 const Lexer = require('lex');
 
 /** @typedef {'OPEN_PARENTHESES' | 'CLOSED_PARENTHESES' | 'STAR' | 'OR' | 'LETTER' | 'CONCAT' | 'END'} TokenType */
@@ -376,7 +377,7 @@ function getAFD(rpnTokens, firstPos, lastPos, followPos) {
 // '(a|b)*abb'
 // '(ab|b)*abb'
 
-const str = '(a|b)*abb#';
+const str = fs.readFileSync('regex-input.txt', 'utf-8');
 const rpnRegEx = getRpnRegEx(str);
 const rpnTokens = getTokens(rpnRegEx);
 const nullable = getNullable(rpnTokens);

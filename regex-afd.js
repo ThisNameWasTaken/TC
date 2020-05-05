@@ -373,10 +373,6 @@ function getAFD(rpnTokens, firstPos, lastPos, followPos) {
   return afd;
 }
 
-// '(a|bb(a|b)*)*abb'
-// '(a|b)*abb'
-// '(ab|b)*abb'
-
 const str = fs.readFileSync('regex-input.txt', 'utf-8');
 const rpnRegEx = getRpnRegEx(str);
 const rpnTokens = getTokens(rpnRegEx);
